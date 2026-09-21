@@ -1,0 +1,38 @@
+name: CD - publish normalized meal history
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package
+        run: python -m pip install --upgrade pip && python -m pip install .
+      - name: Build normalized dataset
+        run: |
+          mkdir -p dist
+          meal-history \
+            --input MealHistory2020-01-01_2026-09-21.csv \
+            --output dist/MealHistory_UTF8.csv \
+            --report dist/quality-report.json
+      - name: Publish deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: meal-history-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

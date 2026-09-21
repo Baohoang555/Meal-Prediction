@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meal History Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css?v=3">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">MEAL OPERATIONS</p>
+          <h1>Meal History Dashboard</h1>
+          <p class="subtitle">Theo dõi dữ liệu suất ăn, trạng thái xác thực và chi phí.</p>
+        </div>
+        <span id="health" class="health">Đang kết nối...</span>
+      </header>
+
+      <section id="summary" class="cards" aria-label="Tổng quan">
+        <article><span>Tổng bản ghi</span><strong id="total">—</strong></article>
+        <article><span>Hợp lệ</span><strong id="valid" class="green">—</strong></article>
+        <article><span>Không hợp lệ</span><strong id="invalid" class="red">—</strong></article>
+        <article><span>Tổng thành tiền</span><strong id="amount">—</strong></article>
+      </section>
+
+      <section class="forecast panel" aria-label="Dự báo suất ăn ngày mai">
+        <div class="forecast-icon">✦</div>
+        <div class="forecast-copy">
+          <p class="eyebrow">DỰ BÁO NHU CẦU</p>
+          <h2>Ngày mai dự kiến <strong id="forecast-total">—</strong> suất ăn</h2>
+          <p id="forecast-detail">Đang tính toán từ lịch sử dữ liệu...</p>
+          <p class="calendar-rule">Đã tính ngày lễ Việt Nam và giảm 75% nhu cầu vào thứ Bảy, Chủ nhật.</p>
+        </div>
+        <div class="forecast-range">
+          <span>Khoảng lịch sử</span>
+          <strong id="forecast-confidence">—</strong>
+          <small id="forecast-samples">—</small>
+        </div>
+      </section>
+
+      <section class="panel data-warning" id="data-warning">
+        <strong>Chất lượng dữ liệu món ăn</strong>
+        <span id="data-warning-text">Đang kiểm tra...</span>
+      </section>
+
+      <section class="dashboard-grid">
+        <div class="panel">
+          <div class="table-head"><h2>Dự báo theo loại món</h2><span>Suất hợp lệ</span></div>
+          <div class="table-wrap"><table><thead><tr><th>Loại món</th><th>Dự báo</th><th>Khoảng lịch sử</th><th>Số ngày mẫu</th><th>Trạng thái</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="table-head"><h2>Độ tin cậy hệ thống</h2><span>Backtest</span></div>
+          <div class="table-wrap"><table><thead><tr><th>Chỉ số</th><th>Giá trị</th><th>Ý nghĩa</th></tr></thead><tbody id="metrics-table"></tbody></table></div>
+          <div class="model-note" id="model-note"></div>
+          <div class="table-wrap"><table><thead><tr><th>Mô hình</th><th>MAPE</th><th>Accuracy</th><th>Số ngày kiểm thử</th></tr></thead><tbody id="models-table"></tbody></table></div>
+          <div class="metric-help">
+            <h3>Giải thích đơn giản</h3>
+            <p><strong>MAE</strong> cho biết dự báo thường lệch bao nhiêu suất. Ví dụ MAE = 100 nghĩa là mỗi ngày dự báo lệch trung bình khoảng 100 suất.</p>
+            <p><strong>RMSE</strong> cũng đo độ lệch, nhưng phạt những lần dự báo sai rất nhiều. Chỉ số này giúp phát hiện ngày hệ thống dự báo quá thấp hoặc quá cao.</p>
+            <p><strong>MAPE</strong> cho biết dự báo sai khoảng bao nhiêu phần trăm so với thực tế. MAPE càng thấp càng tốt.</p>
+            <p><strong>Accuracy tham khảo</strong> được tính từ MAPE: càng cao càng tốt. Đây là chỉ số dễ đọc để xem nhanh, không phải độ chính xác tuyệt đối.</p>
+            <p><strong>Khoảng dự báo</strong> cho biết mức thấp nhất và cao nhất có thể xảy ra. Khoảng rộng hơn thường bao quát được nhiều tình huống hơn, nhưng không làm Accuracy/MAE/RMSE tốt lên.</p>
+            <p><strong>Độ bao phủ khoảng</strong> cho biết trong quá khứ, bao nhiêu phần trăm ngày thực tế nằm trong khoảng dự báo. Khoảng tốt cần bao phủ đủ nhiều nhưng không quá rộng.</p>
+            <p class="metric-tip"><strong>Cách đọc nhanh:</strong> MAE/RMSE thấp và Accuracy cao là tốt. Nếu các chỉ số xấu hoặc dữ liệu món ăn còn thiếu, hãy chuẩn bị thêm một khoảng dự phòng.</p>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="table-head"><h2>Lịch sử kiểm định dự báo</h2><span id="history-summary"></span></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Phạm vi</th><th>MAE</th><th>RMSE</th><th>MAPE</th><th>Accuracy ước tính</th></tr></thead>
+          <tbody id="history-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="/static/app.js?v=5"></script>
+  </body>
+</html>

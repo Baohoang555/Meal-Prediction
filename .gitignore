@@ -1,0 +1,17 @@
+.pytest_cache/
+__pycache__/
+*.egg-info/
+.venv/
+dist/
+
+# Jupyter and local editor files
+.ipynb_checkpoints/
+.vscode/
+
+# Local environments and secrets
+.env
+.env.*
+.conda/
+
+# Local data exports
+*.csv
