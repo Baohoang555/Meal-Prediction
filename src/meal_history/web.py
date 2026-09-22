@@ -169,6 +169,13 @@ def _model_predictions(history: pd.DataFrame, target: date) -> dict[str, int | N
         for name, value in predictions.items()
     }
 
+# Project so sánh các mô hình sau:
+# Trung bình cùng thứ
+# Trung bình có trọng số
+# Trung bình 7 ngày
+# Trung vị cùng thứ
+# San bằng mũ
+# Xu hướng tuyến tính
 
 def _select_model(daily: pd.DataFrame, target: date) -> dict[str, object]:
     rows = daily.sort_values("date").reset_index(drop=True)
