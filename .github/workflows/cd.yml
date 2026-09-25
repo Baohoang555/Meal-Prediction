@@ -35,15 +35,29 @@ jobs:
           mkdir -p data
           python -c "
           import pandas as pd
-          import numpy as np
 
           dates = pd.date_range(start='2025-01-01', periods=100, freq='D')
-          df = pd.DataFrame({
-              'Ngày': dates.strftime('%Y-%m-%d'),
-              'Trạng thái': np.random.choice([0, 1], size=100)
-          })
+          columns = [f'column_{index}' for index in range(13)]
+          df = pd.DataFrame(
+              [[
+                  index,
+                  1000 + index,
+                  f'Employee {index}',
+                  'Team 1',
+                  '',
+                  '',
+                  '',
+                  'Ca 1',
+                  0,
+                  0,
+                  date.strftime('%Y-%m-%d'),
+                  'valid' if index % 2 else 'invalid',
+                  '',
+              ] for index, date in enumerate(dates, start=1)],
+              columns=columns,
+          )
           df.to_csv('data/mock_input.csv', index=False)
-          print('Successfully generated data/mock_input.csv with 100% valid dates and 2 statuses.')
+          print('Successfully generated data/mock_input.csv with 13 columns, valid dates, and 2 statuses.')
           "
 
       - name: Run pipeline verification with validation rules
