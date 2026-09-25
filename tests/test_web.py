@@ -118,6 +118,20 @@ def test_forecast_keeps_point_metrics_separate_from_interval_metrics():
     assert "average_width" in result["interval_metrics"]
 
 
+def test_forecast_exposes_gru_diagnostics_when_optional_model_is_disabled(monkeypatch):
+    monkeypatch.delenv("MEAL_HISTORY_ENABLE_GRU", raising=False)
+    result = TestClient(create_app(_frame())).get(
+        "/api/forecast", params={"target_date": "2026-02-01"}
+    ).json()
+
+    gru = result["model_diagnostics"]["gru"]
+    assert gru["model"] == "GRU"
+    assert gru["enabled"] is False
+    assert gru["status"] == "disabled"
+    assert "lookback" in gru
+    assert "minimum_observations" in gru
+
+
 def test_forecast_applies_weekend_and_holiday_rules():
     frame = pd.DataFrame(
         [

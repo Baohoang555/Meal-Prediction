@@ -7,3 +7,4 @@ services:
       - ./data:/app/data
     environment:
       - DATA_PATH=/app/data/meal_history_clean.csv
+      - MEAL_HISTORY_ENABLE_GRU=1

@@ -22,6 +22,9 @@ dev = [
     "httpx>=0.27,<1",
     "pytest>=8,<10",
 ]
+forecast-gru = [
+    "torch>=2.2,<3",
+]
 
 [project.scripts]
 meal-history = "meal_history.pipeline:main"
