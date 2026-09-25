@@ -272,6 +272,23 @@ async function fetchForecastData(targetDate) {
         document.getElementById("gru-rmse").innerText = gruMetrics.rmse ?? "-";
         document.getElementById("gru-mape").innerText = gruMetrics.mape !== undefined && gruMetrics.mape !== null ? `${gruMetrics.mape}%` : "-";
         document.getElementById("gru-accuracy").innerText = gruMetrics.accuracy !== undefined && gruMetrics.accuracy !== null ? `${gruMetrics.accuracy}%` : "-";
+
+        const advancedBody = document.querySelector("#advanced-model-table tbody");
+        advancedBody.innerHTML = "";
+        (data.model_diagnostics?.advanced || []).forEach(item => {
+            const metrics = item.metrics || {};
+            const row = document.createElement("tr");
+            if (item.model === data.model) row.classList.add("highlight-row");
+            row.innerHTML = `
+                <td><strong>${item.model}</strong>${item.model === data.model ? " ⭐ (Được chọn)" : ""}</td>
+                <td>${metrics.mape ?? "-"}%</td>
+                <td>${metrics.mae ?? "-"}</td>
+                <td>${metrics.rmse ?? "-"}</td>
+                <td>${metrics.accuracy ?? "-"}%</td>
+                <td>${item.validation_samples ?? "-"}</td>
+            `;
+            advancedBody.appendChild(row);
+        });
     } catch (e) {
         console.error("Lỗi khi chạy dự báo:", e);
     }

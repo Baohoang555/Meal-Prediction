@@ -12,7 +12,14 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .advanced_forecast import GRU_LOOKBACK, MIN_GRU_OBSERVATIONS, gru_forecast, gru_is_enabled
+from .advanced_forecast import (
+    GRU_LOOKBACK,
+    MIN_GRU_OBSERVATIONS,
+    advanced_forecasts,
+    advanced_models_enabled,
+    gru_forecast,
+    gru_is_enabled,
+)
 from .pipeline import CANONICAL_COLUMNS
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -267,6 +274,40 @@ def _select_model(daily: pd.DataFrame, target: date) -> dict[str, object]:
                 actual = gru_result.actual
                 predicted = gru_result.predicted
 
+    advanced_diagnostics: list[dict[str, object]] = []
+    if advanced_models_enabled():
+        advanced_results = advanced_forecasts(gru_values)
+        for result in advanced_results:
+            model_metrics = _metrics(result["actual"], result["predicted"])
+            if model_metrics["mape"] is None:
+                continue
+            leaderboard.append({
+                "model": result["model"],
+                "mape": model_metrics["mape"],
+                "accuracy": model_metrics["accuracy"],
+                "mae": model_metrics["mae"],
+                "rmse": model_metrics["rmse"],
+                "samples": len(result["predicted"]),
+            })
+            advanced_diagnostics.append({
+                "model": result["model"],
+                "status": "ok",
+                "metrics": model_metrics,
+                **result["technical"],
+            })
+        leaderboard.sort(key=lambda item: (item["mape"], item["model"]))
+        if leaderboard and leaderboard[0]["model"] != chosen:
+            selected = next(item for item in leaderboard if item["model"] == leaderboard[0]["model"])
+            chosen = selected["model"]
+            selected_result = next(
+                (item for item in advanced_results if item["model"] == chosen),
+                None,
+            )
+            if selected_result is not None:
+                prediction = round(float(selected_result["predicted"][-1]))
+                actual = selected_result["actual"]
+                predicted = selected_result["predicted"]
+
     if _calendar_factor(target) == 0:
         prediction = 0
 
@@ -277,6 +318,7 @@ def _select_model(daily: pd.DataFrame, target: date) -> dict[str, object]:
         "metrics": _metrics(actual, predicted),
         "leaderboard": leaderboard,
         "gru_diagnostics": gru_diagnostics,
+        "advanced_diagnostics": advanced_diagnostics,
     }
 
 
@@ -350,6 +392,7 @@ def _forecast(frame: pd.DataFrame, target_date: date | None = None) -> dict[str,
         "model_diagnostics": {
             "selected": selected["model"],
             "gru": selected["gru_diagnostics"],
+            "advanced": selected["advanced_diagnostics"],
         },
         "target_accuracy": selected["leaderboard"][0]["accuracy"] if selected["leaderboard"] else None,
         "interval_metrics": overall_interval_metrics,

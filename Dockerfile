@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY pyproject.toml .
 COPY src/ /app/src/
-RUN pip install --no-cache-dir ".[forecast-gru]"
+RUN pip install --no-cache-dir ".[forecast-all]"
 
 # Tạo thư mục chứa dữ liệu runtime thay vì hardcode COPY file CSV
 RUN mkdir -p /app/data

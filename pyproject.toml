@@ -25,6 +25,22 @@ dev = [
 forecast-gru = [
     "torch>=2.2,<3",
 ]
+forecast-ml = [
+    "scikit-learn>=1.4,<2",
+]
+forecast-tree = [
+    "scikit-learn>=1.4,<2",
+    "xgboost>=2,<4",
+    "lightgbm>=4,<5",
+    "catboost>=1.2,<2",
+]
+forecast-all = [
+    "scikit-learn>=1.4,<2",
+    "torch>=2.2,<3",
+    "xgboost>=2,<4",
+    "lightgbm>=4,<5",
+    "catboost>=1.2,<2",
+]
 
 [project.scripts]
 meal-history = "meal_history.pipeline:main"
