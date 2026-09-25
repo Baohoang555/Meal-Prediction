@@ -1,17 +1,25 @@
-.pytest_cache/
-__pycache__/
-*.egg-info/
-.venv/
-dist/
-
-# Jupyter and local editor files
-.ipynb_checkpoints/
-.vscode/
-
-# Local environments and secrets
-.env
-.env.*
-.conda/
-
-# Local data exports
+# Data files
 *.csv
+*.xlsx
+!data/.gitkeep
+
+# Output & distribution
+dist/
+report.json
+data/*.csv
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+ENV/
+
+# Testing & notebooks
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/

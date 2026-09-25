@@ -1,11 +1,15 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 WORKDIR /app
-COPY pyproject.toml README.md ./
-COPY src ./src
-COPY MealHistory_UTF8.csv ./
+
+COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 
-ENV MEAL_HISTORY_DATA=/app/MealHistory_UTF8.csv
+COPY src/ /app/src/
+# Tạo thư mục chứa dữ liệu runtime thay vì hardcode COPY file CSV
+RUN mkdir -p /app/data
+
+ENV DATA_DIR=/app/data
 EXPOSE 8000
-CMD ["meal-history-api"]
+
+CMD ["uvicorn", "meal_history.web:app", "--host", "0.0.0.0", "--port", "8000"]

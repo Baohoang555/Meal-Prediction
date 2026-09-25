@@ -1,9 +1,9 @@
 services:
-  meal-history:
+  web:
     build: .
     ports:
-      - "8001:8000"
-    environment:
-      MEAL_HISTORY_DATA: /app/data/MealHistory_UTF8.csv
+      - "8000:8000"
     volumes:
-      - ./MealHistory_UTF8.csv:/app/data/MealHistory_UTF8.csv:ro
+      - ./data:/app/data
+    environment:
+      - DATA_PATH=/app/data/meal_history_clean.csv

@@ -24,34 +24,59 @@ MEAL_ALIASES = {
     "Âu": ("au", "món âu", "european", "western"),
     "Chay": ("chay", "vegetarian", "vegan"),
 }
+
+# Các ngày lễ cố định hàng năm theo Dương lịch
 FIXED_HOLIDAYS = {(1, 1), (4, 30), (5, 1), (9, 2)}
-KNOWN_TET_HOLIDAYS = {
+
+# Bổ sung đầy đủ các ngày nghỉ Tết & nghỉ bù chính thức chu kỳ 2025 - 2026
+OFFICIAL_HOLIDAYS_2025_2026 = {
+    # Năm 2025
+    date(2025, 1, 27),  # Nghỉ Tết Nguyên Đán (28 tháng Chạp)
     date(2025, 1, 28),
     date(2025, 1, 29),
     date(2025, 1, 30),
     date(2025, 1, 31),
+    date(2025, 4, 7),   # Giỗ Tổ Hùng Vương 2025 (10/3 Âm lịch)
+    date(2025, 9, 1),   # Nghỉ liền kề Quốc khánh 2025
+    # Năm 2026
+    date(2026, 2, 16),  # Nghỉ Tết Nguyên Đán (29 Tết 2026)
     date(2026, 2, 17),
     date(2026, 2, 18),
     date(2026, 2, 19),
     date(2026, 2, 20),
+    date(2026, 4, 27),  # Nghỉ bù Giỗ Tổ Hùng Vương 2026 (10/3 ÂL rơi vào Chủ Nhật 26/4)
+    date(2026, 9, 1),   # Nghỉ liền kề Quốc khánh 2026
 }
 
 
 def _data_path() -> Path:
-    return Path(os.getenv("MEAL_HISTORY_DATA", str(DEFAULT_DATA_PATH)))
+    """Xác định đường dẫn file dữ liệu linh hoạt qua DATA_PATH hoặc MEAL_HISTORY_DATA."""
+    env_path = os.getenv("DATA_PATH") or os.getenv("MEAL_HISTORY_DATA")
+    return Path(env_path) if env_path else DEFAULT_DATA_PATH
 
 
-def _load_data() -> pd.DataFrame:
-    path = _data_path()
+def _load_data(target_path: Path | None = None) -> pd.DataFrame:
+    """Tải và kiểm tra tính toàn vẹn của dữ liệu; trả về HTTP 503 thân thiện nếu chưa sẵn sàng."""
+    path = target_path or _data_path()
     if not path.is_file():
-        raise FileNotFoundError(
-            f"Không tìm thấy dữ liệu tại {path}. "
-            "Hãy chạy pipeline trước hoặc đặt MEAL_HISTORY_DATA."
+        raise HTTPException(
+            status_code=503,
+            detail="Dữ liệu chưa được khởi tạo. Vui lòng chạy pipeline cập nhật.",
         )
-    frame = pd.read_csv(path, encoding="utf-8-sig")
+    try:
+        frame = pd.read_csv(path, encoding="utf-8-sig")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Dữ liệu chưa được khởi tạo. Vui lòng chạy pipeline cập nhật.",
+        ) from exc
+
     missing = set(CANONICAL_COLUMNS) - set(frame.columns)
     if missing:
-        raise ValueError(f"Dữ liệu thiếu cột: {', '.join(sorted(missing))}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Dữ liệu thiếu cột: {', '.join(sorted(missing))}. Vui lòng chạy pipeline cập nhật.",
+        )
     return frame[CANONICAL_COLUMNS]
 
 
@@ -66,7 +91,7 @@ def _meal_category(value: object) -> str | None:
 
 
 def _is_vietnamese_holiday(value: date) -> bool:
-    return (value.month, value.day) in FIXED_HOLIDAYS or value in KNOWN_TET_HOLIDAYS
+    return (value.month, value.day) in FIXED_HOLIDAYS or value in OFFICIAL_HOLIDAYS_2025_2026
 
 
 def _calendar_factor(value: date) -> float:
@@ -114,6 +139,17 @@ def _interval_metrics(values: list[int], window: int = 8) -> dict[str, float | N
 
 
 def _model_predictions(history: pd.DataFrame, target: date) -> dict[str, int | None]:
+    factor = _calendar_factor(target)
+    if factor == 0:
+        return {
+            "Trung bình cùng thứ": 0,
+            "Trung bình có trọng số": 0,
+            "Trung bình 7 ngày": 0,
+            "Trung vị cùng thứ": 0,
+            "San bằng mũ": 0,
+            "Xu hướng tuyến tính": 0,
+        }
+
     same_weekday = history[
         history["date"].map(lambda value: value.weekday() == target.weekday())
     ]["servings"].astype(float).tolist()
@@ -135,16 +171,6 @@ def _model_predictions(history: pd.DataFrame, target: date) -> dict[str, int | N
         for value in recent[1:]:
             smoothed = 0.35 * value + 0.65 * smoothed
         exponential = round(smoothed)
-    factor = _calendar_factor(target)
-    if factor == 0:
-        return {
-            "Trung bình cùng thứ": 0,
-            "Trung bình có trọng số": 0,
-            "Trung bình 7 ngày": 0,
-            "Trung vị cùng thứ": 0,
-            "San bằng mũ": 0,
-            "Xu hướng tuyến tính": 0,
-        }
     predictions: dict[str, int | None] = {
         "Trung bình cùng thứ": round(sum(same_weekday[-8:]) / len(same_weekday[-8:]))
         if same_weekday
@@ -169,13 +195,6 @@ def _model_predictions(history: pd.DataFrame, target: date) -> dict[str, int | N
         for name, value in predictions.items()
     }
 
-# Project so sánh các mô hình sau:
-# Trung bình cùng thứ
-# Trung bình có trọng số
-# Trung bình 7 ngày
-# Trung vị cùng thứ
-# San bằng mũ
-# Xu hướng tuyến tính
 
 def _select_model(daily: pd.DataFrame, target: date) -> dict[str, object]:
     rows = daily.sort_values("date").reset_index(drop=True)
@@ -202,7 +221,7 @@ def _select_model(daily: pd.DataFrame, target: date) -> dict[str, object]:
     leaderboard.sort(key=lambda item: item["mape"])
     chosen = leaderboard[0]["model"] if leaderboard else "Trung bình cùng thứ"
     prediction = _model_predictions(rows[rows["date"] < target], target).get(chosen)
-    history = rows[rows["date"] < target]
+
     actual, predicted = [], []
     for index, row in rows.iterrows():
         if index < 8 or row["date"] >= target:
@@ -211,12 +230,13 @@ def _select_model(daily: pd.DataFrame, target: date) -> dict[str, object]:
         if value is not None:
             actual.append(float(row["servings"]))
             predicted.append(float(value))
+
+    # Đã dọn dẹp biến history không sử dụng
     return {
         "model": chosen,
         "prediction": prediction,
         "metrics": _metrics(actual, predicted),
         "leaderboard": leaderboard,
-        "history": history,
     }
 
 
@@ -269,7 +289,8 @@ def _forecast(frame: pd.DataFrame, target_date: date | None = None) -> dict[str,
         })
     available = [item["predicted_servings"] for item in forecasts if item["predicted_servings"] is not None]
     total = sum(available) if available else overall_estimate
-    all_history = daily[daily["date"] < target].sort_values("date")
+
+    # Đã dọn dẹp biến all_history không sử dụng
     overall_history_values = overall_daily["servings"].astype(int).tolist()
     overall_metrics = selected["metrics"]
     overall_interval_metrics = _interval_metrics(overall_history_values)
@@ -288,25 +309,54 @@ def _forecast(frame: pd.DataFrame, target_date: date | None = None) -> dict[str,
         "overall_max_servings": max(overall_values) if overall_values else None,
         "categorized_rows": int(len(categorized)),
         "uncategorized_valid_rows": int(valid.sum() - len(categorized)),
-        "method": f"Tự chọn mô hình {selected['model']}; đã áp dụng lịch ngày thường, cuối tuần và ngày lễ Việt Nam",
+        "method": f"Tự chọn mô hình {selected['model']}; đã áp dụng lịch ngày thường, cuối tuần và ngày lễ/nghỉ bù Việt Nam",
     }
 
 
 def create_app(data: pd.DataFrame | None = None) -> FastAPI:
     app = FastAPI(
         title="Meal History API",
-        version="1.0.0",
+        version="2.0.0",
         description="API and dashboard for normalized meal history.",
     )
     app.state.data = data
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        try:
-            frame = app.state.data if app.state.data is not None else _load_data()
-        except (FileNotFoundError, ValueError) as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        frame = _get_frame(app)
         return {"status": "ok", "rows": str(len(frame))}
+
+    @app.get("/api/validation-status")
+    def validation_status() -> dict[str, object]:
+        """API cung cấp thông số kiểm tra sau chuẩn hóa cho Dashboard."""
+        frame = _get_frame(app)
+        total = len(frame)
+        
+        # 1. Kiểm tra parse ngày (thời gian ăn)
+        parsed_dates = pd.to_datetime(frame["Thời gian ăn"], errors="coerce", dayfirst=False)
+        valid_date_count = int(parsed_dates.notna().sum())
+        date_rate = round((valid_date_count / total * 100), 2) if total > 0 else 0.0
+
+        # 2. Kiểm tra cột Trạng thái (phải chuẩn hoá thành đúng 2 giá trị nhị phân)
+        statuses = frame["Trạng thái"].dropna().unique().tolist()
+        status_counts = {str(k): int(v) for k, v in frame["Trạng thái"].value_counts().items()}
+
+        return {
+            "total_rows": total,
+            "date_validation": {
+                "valid_count": valid_date_count,
+                "parse_rate_percent": date_rate,
+                "is_valid": date_rate >= 95.0,
+                "min_date": str(parsed_dates.min().date()) if valid_date_count > 0 else None,
+                "max_date": str(parsed_dates.max().date()) if valid_date_count > 0 else None,
+            },
+            "status_validation": {
+                "unique_values": statuses,
+                "unique_count": len(statuses),
+                "is_binary": len(statuses) <= 2,
+                "breakdown": status_counts,
+            },
+        }
 
     @app.get("/api/summary")
     def summary() -> dict[str, object]:
@@ -373,11 +423,9 @@ def create_app(data: pd.DataFrame | None = None) -> FastAPI:
 
 
 def _get_frame(app: FastAPI) -> pd.DataFrame:
+    """Truy xuất DataFrame trong state; nếu chưa có thì nạp từ nguồn cấu hình."""
     if app.state.data is None:
-        try:
-            app.state.data = _load_data()
-        except (FileNotFoundError, ValueError) as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        app.state.data = _load_data()
     return app.state.data
 
 

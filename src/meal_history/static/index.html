@@ -1,80 +1,193 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Meal History Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css?v=3">
-  </head>
-  <body>
-    <main class="shell">
-      <header class="hero">
-        <div>
-          <p class="eyebrow">MEAL OPERATIONS</p>
-          <h1>Meal History Dashboard</h1>
-          <p class="subtitle">Theo dõi dữ liệu suất ăn, trạng thái xác thực và chi phí.</p>
-        </div>
-        <span id="health" class="health">Đang kết nối...</span>
-      </header>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Dự Báo Suất Ăn & Giám Sát Dữ Liệu</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Header -->
+        <header class="navbar">
+            <div class="navbar-brand">
+                <h1>Hệ Thống Quản Lý & Dự Báo Suất Ăn</h1>
+                <span class="tag">Chu kỳ 2025 – 2026</span>
+            </div>
+            <div id="connection-status" class="status-indicator">
+                <span class="dot dot-waiting"></span>
+                <span id="connection-text">Đang kiểm tra kết nối...</span>
+            </div>
+        </header>
 
-      <section id="summary" class="cards" aria-label="Tổng quan">
-        <article><span>Tổng bản ghi</span><strong id="total">—</strong></article>
-        <article><span>Hợp lệ</span><strong id="valid" class="green">—</strong></article>
-        <article><span>Không hợp lệ</span><strong id="invalid" class="red">—</strong></article>
-        <article><span>Tổng thành tiền</span><strong id="amount">—</strong></article>
-      </section>
+        <!-- Banner cảnh báo lỗi hệ thống/chưa nạp dữ liệu (HTTP 503) -->
+        <div id="service-alert" class="alert-banner alert-warning hidden">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <strong id="alert-title">Thông báo hệ thống</strong>
+                <p id="alert-message">Dữ liệu chưa được khởi tạo. Vui lòng chạy pipeline cập nhật.</p>
+            </div>
+        </div>
 
-      <section class="forecast panel" aria-label="Dự báo suất ăn ngày mai">
-        <div class="forecast-icon">✦</div>
-        <div class="forecast-copy">
-          <p class="eyebrow">DỰ BÁO NHU CẦU</p>
-          <h2>Ngày mai dự kiến <strong id="forecast-total">—</strong> suất ăn</h2>
-          <p id="forecast-detail">Đang tính toán từ lịch sử dữ liệu...</p>
-          <p class="calendar-rule">Đã tính ngày lễ Việt Nam và giảm 75% nhu cầu vào thứ Bảy, Chủ nhật.</p>
-        </div>
-        <div class="forecast-range">
-          <span>Khoảng lịch sử</span>
-          <strong id="forecast-confidence">—</strong>
-          <small id="forecast-samples">—</small>
-        </div>
-      </section>
+        <main id="dashboard-content">
+            <!-- 1. Trạng thái kiểm chuẩn dữ liệu (Data Validation) -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Kiểm Chuẩn Chất Lượng Dữ Liệu (Validation Status)</h2>
+                    <span class="badge badge-info">Sau chuẩn hóa</span>
+                </div>
+                <div class="card-body">
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <span class="metric-label">Tổng số bản ghi</span>
+                            <span class="metric-value" id="val-total-rows">-</span>
+                            <span class="metric-sub" id="val-date-range">Khoảng ngày: Đang tải...</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Cột thời gian parse hợp lệ</span>
+                            <span class="metric-value" id="val-date-rate">-%</span>
+                            <span class="metric-badge" id="val-date-badge">Tiêu chuẩn: ≥95%</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Trạng thái nhị phân</span>
+                            <span class="metric-value" id="val-status-count">-</span>
+                            <span class="metric-badge" id="val-status-badge">Tiêu chuẩn: đúng 2 giá trị</span>
+                        </div>
+                    </div>
 
-      <section class="panel data-warning" id="data-warning">
-        <strong>Chất lượng dữ liệu món ăn</strong>
-        <span id="data-warning-text">Đang kiểm tra...</span>
-      </section>
+                    <div class="info-callout">
+                        <strong>📌 Quy chuẩn lịch nghỉ lễ & nghỉ bù 2025–2026 đã kích hoạt:</strong>
+                        <ul>
+                            <li><strong>27/01/2025:</strong> Nghỉ Tết Nguyên Đán (28 tháng Chạp năm Giáp Thìn).</li>
+                            <li><strong>01/09/2025:</strong> Nghỉ liền kề dịp lễ Quốc khánh 02/09.</li>
+                            <li><strong>16/02/2026:</strong> Nghỉ Tết Nguyên Đán (29 tháng Chạp năm Bính Ngọ).</li>
+                            <li><strong>27/04/2026:</strong> Nghỉ bù Giỗ Tổ Hùng Vương (10/03 ÂL rơi vào Chủ Nhật ngày 26/04/2026).</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
 
-      <section class="dashboard-grid">
-        <div class="panel">
-          <div class="table-head"><h2>Dự báo theo loại món</h2><span>Suất hợp lệ</span></div>
-          <div class="table-wrap"><table><thead><tr><th>Loại món</th><th>Dự báo</th><th>Khoảng lịch sử</th><th>Số ngày mẫu</th><th>Trạng thái</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
-        </div>
-        <div class="panel">
-          <div class="table-head"><h2>Độ tin cậy hệ thống</h2><span>Backtest</span></div>
-          <div class="table-wrap"><table><thead><tr><th>Chỉ số</th><th>Giá trị</th><th>Ý nghĩa</th></tr></thead><tbody id="metrics-table"></tbody></table></div>
-          <div class="model-note" id="model-note"></div>
-          <div class="table-wrap"><table><thead><tr><th>Mô hình</th><th>MAPE</th><th>Accuracy</th><th>Số ngày kiểm thử</th></tr></thead><tbody id="models-table"></tbody></table></div>
-          <div class="metric-help">
-            <h3>Giải thích đơn giản</h3>
-            <p><strong>MAE</strong> cho biết dự báo thường lệch bao nhiêu suất. Ví dụ MAE = 100 nghĩa là mỗi ngày dự báo lệch trung bình khoảng 100 suất.</p>
-            <p><strong>RMSE</strong> cũng đo độ lệch, nhưng phạt những lần dự báo sai rất nhiều. Chỉ số này giúp phát hiện ngày hệ thống dự báo quá thấp hoặc quá cao.</p>
-            <p><strong>MAPE</strong> cho biết dự báo sai khoảng bao nhiêu phần trăm so với thực tế. MAPE càng thấp càng tốt.</p>
-            <p><strong>Accuracy tham khảo</strong> được tính từ MAPE: càng cao càng tốt. Đây là chỉ số dễ đọc để xem nhanh, không phải độ chính xác tuyệt đối.</p>
-            <p><strong>Khoảng dự báo</strong> cho biết mức thấp nhất và cao nhất có thể xảy ra. Khoảng rộng hơn thường bao quát được nhiều tình huống hơn, nhưng không làm Accuracy/MAE/RMSE tốt lên.</p>
-            <p><strong>Độ bao phủ khoảng</strong> cho biết trong quá khứ, bao nhiêu phần trăm ngày thực tế nằm trong khoảng dự báo. Khoảng tốt cần bao phủ đủ nhiều nhưng không quá rộng.</p>
-            <p class="metric-tip"><strong>Cách đọc nhanh:</strong> MAE/RMSE thấp và Accuracy cao là tốt. Nếu các chỉ số xấu hoặc dữ liệu món ăn còn thiếu, hãy chuẩn bị thêm một khoảng dự phòng.</p>
-          </div>
-        </div>
-      </section>
-      <section class="panel">
-        <div class="table-head"><h2>Lịch sử kiểm định dự báo</h2><span id="history-summary"></span></div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Phạm vi</th><th>MAE</th><th>RMSE</th><th>MAPE</th><th>Accuracy ước tính</th></tr></thead>
-          <tbody id="history-table"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-    <script src="/static/app.js?v=5"></script>
-  </body>
+            <!-- 2. Thống kê tổng quan dữ liệu (Summary KPI) -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Thống Kê Tổng Quan</h2>
+                </div>
+                <div class="card-body">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-title">Bản ghi hợp lệ</span>
+                            <span class="summary-num text-success" id="sum-valid">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-title">Bản ghi không hợp lệ</span>
+                            <span class="summary-num text-danger" id="sum-invalid">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-title">Số lượng phòng ban</span>
+                            <span class="summary-num" id="sum-depts">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-title">Tổng ngân sách phát sinh</span>
+                            <span class="summary-num text-primary" id="sum-amount">- đ</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Khu vực dự báo suất ăn (Forecast Section) -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Dự Báo Nhu Cầu Suất Ăn</h2>
+                    <div class="forecast-control">
+                        <label for="forecast-date">Ngày dự báo:</label>
+                        <input type="date" id="forecast-date">
+                        <button id="btn-forecast" class="btn btn-primary">Chạy Dự Báo</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="forecast-result-header">
+                        <div>
+                            <h3 id="forecast-target-label">Dự báo cho: -</h3>
+                            <p class="method-text" id="forecast-method">-</p>
+                        </div>
+                        <div class="forecast-highlight">
+                            <span class="highlight-label">Tổng suất ăn ước tính</span>
+                            <span class="highlight-val" id="forecast-total-val">-</span>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid category-grid" id="category-cards">
+                        <!-- Thẻ các món Việt, Âu, Chay sẽ được render tại đây -->
+                    </div>
+
+                    <div class="model-meta-box">
+                        <div class="meta-row">
+                            <span>Mô hình tối ưu được chọn: <strong id="best-model-name">-</strong></span>
+                            <span>Độ chính xác (Backtest Accuracy): <strong id="best-model-acc">-%</strong></span>
+                            <span>Khoảng lịch sử (Min - Max): <strong id="best-model-range">-</strong></span>
+                        </div>
+                    </div>
+
+                    <details class="leaderboard-details">
+                        <summary>Xem bảng xếp hạng hiệu năng mô hình (Model Leaderboard)</summary>
+                        <table class="data-table" id="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Mô hình</th>
+                                    <th>MAPE (%)</th>
+                                    <th>Độ chính xác (%)</th>
+                                    <th>Mẫu kiểm thử</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dữ liệu leaderboard -->
+                            </tbody>
+                        </table>
+                    </details>
+                </div>
+            </section>
+
+            <!-- 4. Tra cứu dữ liệu chi tiết -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Tra Cứu Dữ Liệu</h2>
+                    <div class="filters-bar">
+                        <input type="text" id="search-input" placeholder="Tìm kiếm từ khóa...">
+                        <select id="department-select">
+                            <option value="">Tất cả phòng ban</option>
+                        </select>
+                        <select id="status-select">
+                            <option value="">Tất cả trạng thái</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="data-table" id="records-table">
+                        <thead>
+                            <tr>
+                                <th>Thời gian ăn</th>
+                                <th>Món ăn</th>
+                                <th>Phòng ban</th>
+                                <th>Trạng thái</th>
+                                <th>Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody id="records-body">
+                            <tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination-wrapper">
+                        <span id="pagination-info">Trang 1 / 1 (0 dòng)</span>
+                        <div class="pagination-buttons">
+                            <button id="btn-prev" class="btn btn-outline" disabled>Trước</button>
+                            <button id="btn-next" class="btn btn-outline" disabled>Sau</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
 </html>
